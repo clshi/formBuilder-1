@@ -149,6 +149,7 @@ window.neon.Builder = (function($) {
       },
       sortableControls: false,
       stickyControls: false,
+      // no use
       showActionButtons: true,
       typeUserAttrs: {},
       typeUserEvents: {},
@@ -177,13 +178,217 @@ window.neon.Builder = (function($) {
     }
 
     this.element = element;
+    this._helpers = formBuilderHelpersFn(this.opts, this);
+    this.layout = this._helpers.editorLayout(this.opts.controlPosition);
   };
 
   Builder.prototype.init = function() {
-    this.frmbID = 'frmb-' + $('ul[id^=frmb-]').length++;
-    this.opts.formID = frmbID;
+    this.frmbID = this.genFrmbID();
+    this.opts.formID = this.frmbID;
   };
 
+  Builder.prototype.genFrmbID = function() {
+    var type = this.opts.type;
+    return 'frmb-' + type + '-' + $('ul[id^=frmb-' + type + ']-').length++;
+  };
+
+  Builder.prototype.createControlBoxDom = function(frmbFields) {
+    var frmbID = this.frmbID;
+    var boxID = frmbID + '-control-box';
+    // Create draggable fields for formBuilder
+    var cbUl = utils.markup('ul', null, {id: boxID, className: 'frmb-control'});
+
+    var $cbUL = $(cbUl);
+
+    // Loop through
+    utils.forEach(frmbFields, (i) => {
+      let $field = $('<li/>', {
+        'class': 'icon-' + frmbFields[i].attrs.className,
+        'type': frmbFields[i].attrs.type,
+        'name': frmbFields[i].attrs.className,
+        'label': frmbFields[i].label
+      });
+
+      $field.data('newFieldData', frmbFields[i]);
+      $field.data('attrs', frmbFields[i].attrs);
+
+      let typeLabel = utils.markup('span', frmbFields[i].label);
+      $field.html(typeLabel).appendTo($cbUL);
+    });
+
+    return $cbUL;
+  };
+
+  Builder.prototype.buildControlBox = function() {
+    var opts = this.opts;
+    var frmbFields = this._helpers.orderFields(opts.frmbFields);
+    if (opts.disableFields) {
+      // remove disabledFields
+      frmbFields = frmbFields.filter(function(field) {
+        return !utils.inArray(field.attrs.type, opts.disableFields);
+      });
+    }
+
+    var $cbUL = this.createControlBoxDom(frmbFields);
+    this.$cbUL = $cbUL;
+
+    if (opts.sortableControls) {
+      $cbUL.addClass('sort-enabled');
+    }
+
+  };
+
+  Builder.prototype.createFieldBoxDom = function() {
+    var frmbID = this.frmbID;
+    var $sortableFields = $('<ul/>').attr('id', frmbID).addClass('frmb');
+    
+    return $sortableFields;
+  };
+
+  Builder.prototype.buildFieldBox = function() {
+    var $sortableFields = this.createFieldBoxDom();
+    this.$sortableFields = $sortableFields;
+    this.lastID = this.frmbID + '-fld-1';
+  };
+
+  Builder.prototype.bindControlBoxEvents = function() {
+    var self = this;
+    var _helpers = this._helpers;
+    var $sortableFields = this.$sortableFields;
+    var $cbUL = this.$cbUL;
+    var opts = this.opts;
+    // ControlBox with different fields
+    $cbUL.sortable({
+      helper: 'clone',
+      opacity: 0.9,
+      connectWith: $sortableFields,
+      cancel: '.fb-separator',
+      cursor: 'move',
+      scroll: false,
+      placeholder: 'ui-state-highlight',
+      start: _helpers.startMoving,
+      stop: _helpers.stopMoving,
+      revert: 150,
+      beforeStop: _helpers.beforeStop,
+      distance: 3,
+      update: function(event, ui) {
+        if (_helpers.doCancel) {
+          return false;
+        }
+        if (ui.item.parent()[0] === $sortableFields[0]) {
+          self.processControl(ui.item);
+          _helpers.doCancel = true;
+        } else {
+          _helpers.setFieldOrder($cbUL);
+          _helpers.doCancel = !opts.sortableControls;
+        }
+      }
+    });
+
+    $('li', $cbUL).click(function() {
+      _helpers.stopIndex = undefined;
+      self.processControl($(this));
+      _helpers.save();
+    });
+  };
+
+  Builder.prototype.bindFieldBoxEvents = function() {
+    var $sortableFields = this.$sortableFields;
+    var _helpers = this._helpers;
+    $sortableFields.sortable({
+      cursor: 'move',
+      opacity: 0.9,
+      revert: 150,
+      beforeStop: _helpers.beforeStop,
+      start: _helpers.startMoving,
+      stop: _helpers.stopMoving,
+      cancel: 'input, select, .disabled, .form-group, .btn',
+      placeholder: 'frmb-placeholder'
+    });
+
+    var saveAndUpdate = _helpers.debounce(function(evt) {
+      if (evt) {
+        if (evt.type === 'keyup' && this.name === 'className') {
+          return false;
+        }
+      }
+
+      let $field = $(this).parents('.form-field:eq(0)');
+      _helpers.updatePreview($field);
+      _helpers.save();
+    });
+
+    // Save field on change
+    $sortableFields.on('change blur keyup', '.form-elements input, .form-elements select, .form-elements textarea', saveAndUpdate);
+  };
+
+  Builder.prototype.processControl = function(control) {
+    this.prepFieldVars(control, true);
+  };
+
+  Builder.prototype.prepFieldVars = function($field, isNew = false) {
+
+  };
+
+  Builder.prototype.render = function() {
+    var frmbID = this.frmbID;
+    var _helpers = this._helpers;
+    var $formWrap = $('<div/>', {
+      id: frmbID + '-form-wrap',
+      'class': 'form-wrap form-builder' + _helpers.mobileClass()
+    });
+
+    var $stageWrap = $('<div/>', {
+      id: frmbID + '-stage-wrap',
+      'class': 'stage-wrap ' + this.layout.stage
+    });
+
+    var cbWrap = $('<div/>', {
+      id: frmbID + '-cb-wrap',
+      'class': 'cb-wrap ' + this.layout.controls
+    }).append(this.$cbUL[0]);
+
+    $stageWrap.append(this.$sortableFields, cbWrap);
+    $stageWrap.before($formWrap);
+    $formWrap.append($stageWrap, cbWrap);
+    $(this.element).append($formWrap);
+
+    this.$stageWrap = $stageWrap;
+  };
+
+  Builder.prototype.create = function() {
+    this.init();
+    this.buildControlBox();
+    this.buildFieldBox();
+    this.render();
+    this.bindControlBoxEvents();
+    this.bindFieldBoxEvents();
+  };
+
+  // Add append and prepend options if necessary
+  Builder.prototype.nonEditableFields = function() {
+    var opts = this.opts;
+    var $sortableFields = this.$sortableFields;
+
+    let cancelArray = [];
+
+    if (opts.prepend && !$('.disabled.prepend', $sortableFields).length) {
+      let prependedField = utils.markup('li', opts.prepend, {className: 'disabled prepend'});
+      cancelArray.push(true);
+      $sortableFields.prepend(prependedField);
+    }
+
+    if (opts.append && !$('.disabled.append', $sortableFields).length) {
+      let appendedField = utils.markup('li', opts.append, {className: 'disabled append'});
+      cancelArray.push(true);
+      $sortableFields.append(appendedField);
+    }
+
+    if (cancelArray.some(elem => elem === true)) {
+      this.$stageWrap.removeClass('empty');
+    }
+  };
+ 
   return Builder;
 
 })(jQuery);

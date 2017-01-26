@@ -6,7 +6,24 @@ jQuery(document).ready(function($) {
     editing = true,
     fbOptions = {
       dataType: 'json',
-      type: 'vertical'
+      type: 'vertical',
+      frmbFields: [{
+        label: 'autocomplete',
+        attrs: {
+          type: 'autocomplete',
+          className: 'autocomplete',
+          name: 'autocomplete'
+        }
+      }, {
+        label: 'button',
+        attrs: {
+          type: 'button',
+          className: 'button-input',
+          name: 'button'
+        }
+      }],
+      sortableControls: true,
+      prepend: true
     };
 
   if (formData) {
@@ -19,7 +36,6 @@ jQuery(document).ready(function($) {
   };
 
   var formBuilder = $(buildWrap).neonFormBuilder(fbOptions).data('formBuilder');
-  formBuilder.test();
 
   $('.form-builder-save').click(function() {
     toggleEdit();

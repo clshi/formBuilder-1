@@ -10,6 +10,7 @@
       } else if(options.type == 'horizontal') {
         formBuilder = new neon.HorizontalFormBuilder(options, this);
       }
+      formBuilder.create();
       $(this).data('formBuilder', formBuilder);
       return formBuilder;
     });
