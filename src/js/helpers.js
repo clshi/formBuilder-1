@@ -41,7 +41,7 @@ function formBuilderHelpersFn(opts, formBuilder) {
    */
   _helpers.startMoving = function(event, ui) {
     ui.item.show().addClass('moving');
-    _helpers.startIndex = $('li', this).index(ui.item);
+    _helpers.startIndex = $(this).children().index(ui.item);
   };
 
   /**
@@ -68,6 +68,7 @@ function formBuilderHelpersFn(opts, formBuilder) {
     var form = document.getElementById(opts.formID),
       lastIndex = form.children.length - 1,
       cancelArray = [];
+
     _helpers.stopIndex = ui.placeholder.index() - 1;
 
     if (!opts.sortableControls && ui.item.parent().hasClass('frmb-control')) {
@@ -81,7 +82,6 @@ function formBuilderHelpersFn(opts, formBuilder) {
     if (opts.append) {
       cancelArray.push((_helpers.stopIndex + 1) === lastIndex);
     }
-
     _helpers.doCancel = cancelArray.some(elem => elem === true);
   };
 
@@ -624,17 +624,25 @@ function formBuilderHelpersFn(opts, formBuilder) {
    * @param {Object} $cbUL our list of elements
    */
   _helpers.setFieldOrder = function($cbUL) {
+    _helpers.setFieldOrderByKey($cbUL, 'type');
+  };
+
+  _helpers.setFieldOrderByName = function($cbUL) {
+    _helpers.setFieldOrderByKey($cbUL, 'name');
+  };
+
+  _helpers.setFieldOrderByKey = function($cbUL, key) {
     if (!opts.sortableControls) {
       return false;
     }
     var fieldOrder = {};
     $cbUL.children().each(function(index, element) {
-      fieldOrder[index] = $(element).data('attrs').type;
+      fieldOrder[index] = $(element).data('attrs')[key];
     });
     if (window.sessionStorage) {
       window.sessionStorage.setItem('fieldOrder', window.JSON.stringify(fieldOrder));
     }
-  };
+  }
 
   /**
    * Reorder the controls if the user has previously ordered them.
@@ -643,18 +651,27 @@ function formBuilderHelpersFn(opts, formBuilder) {
    * @return {Array}
    */
   _helpers.orderFields = function(frmbFields) {
+    return _helpers.orderFieldsByKey(frmbFields, 'type');
+  };
+
+  _helpers.orderFieldsByName = function(frmbFields) {
+    return _helpers.orderFieldsByKey(frmbFields, 'name');
+  }
+
+  _helpers.orderFieldsByKey = function(frmbFields, key) {
     var fieldOrder = false;
 
     if (window.sessionStorage) {
       if (opts.sortableControls) {
         fieldOrder = window.sessionStorage.getItem('fieldOrder');
+        console.log(fieldOrder);
       } else {
         window.sessionStorage.removeItem('fieldOrder');
       }
     }
 
     if (!fieldOrder) {
-      let controlOrder = opts.controlOrder.concat(frmbFields.map(field => field.attrs.type));
+      let controlOrder = opts.controlOrder.concat(frmbFields.map(field => field.attrs[key]));
       fieldOrder = utils.unique(controlOrder);
     } else {
       fieldOrder = window.JSON.parse(fieldOrder);
@@ -665,15 +682,15 @@ function formBuilderHelpersFn(opts, formBuilder) {
 
     var newOrderFields = [];
 
-    fieldOrder.forEach((fieldType) => {
+    fieldOrder.forEach((fieldKey) => {
       var field = frmbFields.filter(function(field) {
-        return field.attrs.type === fieldType;
+        return field.attrs[key] === fieldKey;
       })[0];
       newOrderFields.push(field);
     });
 
     return newOrderFields.filter(Boolean);
-  };
+  }
 
   /**
    * Close fields being editing

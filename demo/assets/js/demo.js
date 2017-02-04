@@ -8,22 +8,87 @@ jQuery(document).ready(function($) {
       dataType: 'json',
       type: 'vertical',
       frmbFields: [{
-        label: 'autocomplete',
+        label: 'First Name',
         attrs: {
-          type: 'autocomplete',
-          className: 'autocomplete',
-          name: 'autocomplete'
+          type: 'text',
+          name: 'firstName',
+          required: true,
+          description: 'aa'
         }
       }, {
-        label: 'button',
+        label: 'Last Name',
         attrs: {
-          type: 'button',
-          className: 'button-input',
-          name: 'button'
+          type: 'text',
+          name: 'lastName',
+          required: true
+        }
+      }, {
+        label: 'Amount',
+        attrs: {
+          type: 'text',
+          name: 'amount',
+          value: '10'
+        }
+      }, {
+        label: 'Agent',
+        attrs: {
+          type: 'select',
+          name: 'agent',
+          values: [
+            {
+              "label": "A1",
+              "value": "a-1"
+            },
+            {
+              "label": "A 2",
+              "value": "a-2",
+              "selected": true
+            },
+            {
+              "label": "A 3",
+              "value": "a-3"
+            }
+          ]
+        }
+      }, {
+        label: 'Notify me',
+        attrs: {
+          type: 'checkbox',
+          name: 'notify'
+        }
+      }, {
+        label: 'Favourite',
+        attrs: {
+          type: 'checkbox-group',
+          name: 'favourite'
+        }
+      }, {
+        label: 'Gender',
+        attrs: {
+          type: 'radio-group',
+          name: 'gender',
+          values: [
+            {
+              "label": "Male",
+              "value": "1"
+            },
+            {
+              "label": "Female",
+              "value": "0",
+              "selected": true
+            }
+          ] 
+        }
+      }, {
+        label: 'Feedback',
+        attrs: {
+          type: 'textarea',
+          name: 'feedback'
         }
       }],
       sortableControls: true,
-      prepend: true
+      editOnAdd: false,
+      stickyControls: true
     };
 
   if (formData) {
@@ -37,17 +102,33 @@ jQuery(document).ready(function($) {
 
   var formBuilder = $(buildWrap).neonFormBuilder(fbOptions).data('formBuilder');
 
-  $('.form-builder-save').click(function() {
-    toggleEdit();
-    $(renderWrap).formRender({
-      dataType: 'json',
-      formData: formBuilder.formData
-    });
-
-    window.sessionStorage.setItem('formData', JSON.stringify(formBuilder.formData));
+  $('.neon-form-builder-save').click(function() {
+    window.sessionStorage.setItem('formData', JSON.stringify(formBuilder.getData()));
   });
 
   editBtn.onclick = function() {
     toggleEdit();
   };
+
+  if(window.sessionStorage.getItem('formData')) {
+    formBuilder.setData(JSON.parse(window.sessionStorage.getItem('formData')));  
+  }
+/*  var data = [{
+    "type": "radio-group",
+    "name": "gender",
+    "label": "Gender",
+    "className": "radio-group",
+    "values": [
+      {
+        "label": "hh",
+        "value": "1",
+        "selected": true
+      },
+      {
+        "label": "xx",
+        "value": "0"
+      }
+    ]
+  }];
+  formBuilder.setData(JSON.stringify(data));*/
 });

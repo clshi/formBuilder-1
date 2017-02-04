@@ -15,17 +15,8 @@ window.neon.Builder = (function($) {
       // Array of fields to disable
       disableFields: [],
       editOnAdd: false,
-      // Uneditable fields or other content you would like to appear before and after regular fields:
-      append: false,
-      prepend: false,
-      // Not use
       defaultFields: [],
-      // Not use
-      inputSets: [],
       fieldRemoveWarn: false,
-      roles: {
-        1: 'Administrator'
-      },
       messages: {
         addOption: 'Add Option +',
         allFieldsRemoved: 'All fields were removed.',
@@ -101,6 +92,7 @@ window.neon.Builder = (function($) {
         removeOption: 'Remove Option',
         remove: '&#215;',
         required: 'Required',
+        hidden: 'Hidden',
         richText: 'Rich Text Editor',
         roles: 'Access',
         save: 'Save',
@@ -149,10 +141,7 @@ window.neon.Builder = (function($) {
       },
       sortableControls: false,
       stickyControls: false,
-      // no use
       showActionButtons: true,
-      typeUserAttrs: {},
-      typeUserEvents: {},
       prefix: 'neon-form-builder-'
     };
 
@@ -187,41 +176,10 @@ window.neon.Builder = (function($) {
     this.opts.formID = this.frmbID;
   };
 
-  Builder.prototype.genFrmbID = function() {
-    var type = this.opts.type;
-    return 'frmb-' + type + '-' + $('ul[id^=frmb-' + type + ']-').length++;
-  };
-
-  Builder.prototype.createControlBoxDom = function(frmbFields) {
-    var frmbID = this.frmbID;
-    var boxID = frmbID + '-control-box';
-    // Create draggable fields for formBuilder
-    var cbUl = utils.markup('ul', null, {id: boxID, className: 'frmb-control'});
-
-    var $cbUL = $(cbUl);
-
-    // Loop through
-    utils.forEach(frmbFields, (i) => {
-      let $field = $('<li/>', {
-        'class': 'icon-' + frmbFields[i].attrs.className,
-        'type': frmbFields[i].attrs.type,
-        'name': frmbFields[i].attrs.className,
-        'label': frmbFields[i].label
-      });
-
-      $field.data('newFieldData', frmbFields[i]);
-      $field.data('attrs', frmbFields[i].attrs);
-
-      let typeLabel = utils.markup('span', frmbFields[i].label);
-      $field.html(typeLabel).appendTo($cbUL);
-    });
-
-    return $cbUL;
-  };
-
   Builder.prototype.buildControlBox = function() {
     var opts = this.opts;
-    var frmbFields = this._helpers.orderFields(opts.frmbFields);
+
+    var frmbFields = this._helpers.orderFieldsByName(opts.frmbFields);
     if (opts.disableFields) {
       // remove disabledFields
       frmbFields = frmbFields.filter(function(field) {
@@ -230,25 +188,24 @@ window.neon.Builder = (function($) {
     }
 
     var $cbUL = this.createControlBoxDom(frmbFields);
-    this.$cbUL = $cbUL;
+
+    var cbList = $cbUL.children();
+    utils.forEach(cbList, (i) => {
+      $(cbList[i]).data('newFieldData', frmbFields[i]);
+      $(cbList[i]).data('attrs', frmbFields[i].attrs);
+    });
 
     if (opts.sortableControls) {
       $cbUL.addClass('sort-enabled');
     }
 
-  };
-
-  Builder.prototype.createFieldBoxDom = function() {
-    var frmbID = this.frmbID;
-    var $sortableFields = $('<ul/>').attr('id', frmbID).addClass('frmb');
-    
-    return $sortableFields;
+    this.$cbUL = $cbUL;
   };
 
   Builder.prototype.buildFieldBox = function() {
     var $sortableFields = this.createFieldBoxDom();
-    this.$sortableFields = $sortableFields;
     this.lastID = this.frmbID + '-fld-1';
+    this.$sortableFields = $sortableFields;
   };
 
   Builder.prototype.bindControlBoxEvents = function() {
@@ -257,6 +214,7 @@ window.neon.Builder = (function($) {
     var $sortableFields = this.$sortableFields;
     var $cbUL = this.$cbUL;
     var opts = this.opts;
+
     // ControlBox with different fields
     $cbUL.sortable({
       helper: 'clone',
@@ -279,13 +237,13 @@ window.neon.Builder = (function($) {
           self.processControl(ui.item);
           _helpers.doCancel = true;
         } else {
-          _helpers.setFieldOrder($cbUL);
+          _helpers.setFieldOrderByName($cbUL);
           _helpers.doCancel = !opts.sortableControls;
         }
       }
     });
 
-    $('li', $cbUL).click(function() {
+    $($cbUL).children().click(function() {
       _helpers.stopIndex = undefined;
       self.processControl($(this));
       _helpers.save();
@@ -306,7 +264,7 @@ window.neon.Builder = (function($) {
       placeholder: 'frmb-placeholder'
     });
 
-    var saveAndUpdate = _helpers.debounce(function(evt) {
+    Builder.prototype.saveAndUpdate = _helpers.debounce(function(evt) {
       if (evt) {
         if (evt.type === 'keyup' && this.name === 'className') {
           return false;
@@ -319,20 +277,17 @@ window.neon.Builder = (function($) {
     });
 
     // Save field on change
-    $sortableFields.on('change blur keyup', '.form-elements input, .form-elements select, .form-elements textarea', saveAndUpdate);
+    $sortableFields.on('change blur keyup', '.form-elements input, .form-elements select, .form-elements textarea', this.saveAndUpdate);
   };
 
   Builder.prototype.processControl = function(control) {
     this.prepFieldVars(control, true);
   };
 
-  Builder.prototype.prepFieldVars = function($field, isNew = false) {
-
-  };
-
   Builder.prototype.render = function() {
     var frmbID = this.frmbID;
     var _helpers = this._helpers;
+    var opts = this.opts;
     var $formWrap = $('<div/>', {
       id: frmbID + '-form-wrap',
       'class': 'form-wrap form-builder' + _helpers.mobileClass()
@@ -348,6 +303,31 @@ window.neon.Builder = (function($) {
       'class': 'cb-wrap ' + this.layout.controls
     }).append(this.$cbUL[0]);
 
+    if (opts.showActionButtons) {
+      // Build our headers and action links
+      let viewDataText = opts.dataType === 'xml' ? opts.messages.viewXML : opts.messages.viewJSON,
+        viewData = utils.markup('button', viewDataText, {
+          id: frmbID + '-view-data',
+          type: 'button',
+          className: 'view-data btn btn-default'
+        }),
+        clearAll = utils.markup('button', opts.messages.clearAll, {
+          id: frmbID + '-clear-all',
+          type: 'button',
+          className: 'clear-all btn btn-default'
+        }),
+        saveAll = utils.markup('button', opts.messages.save, {
+          className: `btn btn-primary ${opts.prefix}save`,
+          id: frmbID + '-save',
+          type: 'button'
+        }),
+        formActions = utils.markup('div', [clearAll, viewData, saveAll], {
+          className: 'form-actions btn-group'
+        });
+
+      cbWrap.append(formActions);
+    }
+
     $stageWrap.append(this.$sortableFields, cbWrap);
     $stageWrap.before($formWrap);
     $formWrap.append($stageWrap, cbWrap);
@@ -356,37 +336,106 @@ window.neon.Builder = (function($) {
     this.$stageWrap = $stageWrap;
   };
 
+  Builder.prototype.loadFields = function() {
+    var opts = this.opts;
+    var $stageWrap = this.$stageWrap;
+    var $sortableFields = this.$sortableFields;
+    var _helpers = this._helpers;
+
+    let formData = this.formData;
+    if (formData && formData.length) {
+      for (let i = 0; i < formData.length; i++) {
+        this.prepFieldVars(formData[i]);
+      }
+      $stageWrap.removeClass('empty');
+    } else if (opts.defaultFields && opts.defaultFields.length) {
+      // Load default fields if none are set
+      opts.defaultFields.forEach(field => this.prepFieldVars(field));
+      $stageWrap.removeClass('empty');
+    } else if (!opts.prepend && !opts.append) {
+      $stageWrap.addClass('empty').attr('data-content', opts.messages.getStarted);
+    }
+    _helpers.save();
+
+    $('li.form-field:not(.disabled)', $sortableFields).each(function() {
+      _helpers.updatePreview($(this));
+    });
+  };
+
   Builder.prototype.create = function() {
+
     this.init();
     this.buildControlBox();
     this.buildFieldBox();
     this.render();
     this.bindControlBoxEvents();
     this.bindFieldBoxEvents();
+    this.bindEvents();
+
+    if (this.opts.showActionButtons) {
+      this.bindActionButtonEvents();
+    }
+
+    this._helpers.getData();
+    this.loadFields();
+
+    this.$sortableFields.css('min-height', this.$cbUL.height());
+
+    // If option set, controls will remain in view in editor
+    if (this.opts.stickyControls) {
+      this._helpers.stickyControls(this.$sortableFields, this.$cbUL.get(0));
+    }
+
+    document.dispatchEvent(this.events.loaded);
   };
 
-  // Add append and prepend options if necessary
-  Builder.prototype.nonEditableFields = function() {
+  // override
+  Builder.prototype.genFrmbID = function() {};
+  Builder.prototype.createControlBoxDom = function(frmbFields) {};
+  Builder.prototype.createFieldBoxDom = function() {};
+  Builder.prototype.prepFieldVars = function($field, isNew = false) {};
+  Builder.prototype.bindEvents = function() {};
+
+  // private 
+  Builder.prototype.bindActionButtonEvents = function() {
     var opts = this.opts;
-    var $sortableFields = this.$sortableFields;
+    var frmbID = this.frmbID;
+    var _helpers = this._helpers;
 
-    let cancelArray = [];
+    // View XML
+    var xmlButton = $(document.getElementById(frmbID + '-view-data'));
+    xmlButton.click(function(e) {
+      e.preventDefault();
+      _helpers.showData();
+    });
 
-    if (opts.prepend && !$('.disabled.prepend', $sortableFields).length) {
-      let prependedField = utils.markup('li', opts.prepend, {className: 'disabled prepend'});
-      cancelArray.push(true);
-      $sortableFields.prepend(prependedField);
-    }
+    // Clear all fields in form editor
+    var clearButton = $(document.getElementById(frmbID + '-clear-all'));
+    clearButton.click(function() {
+      let fields = $('li.form-field');
+      let buttonPosition = this.getBoundingClientRect(),
+        bodyRect = document.body.getBoundingClientRect(),
+        coords = {
+          pageX: buttonPosition.left + (buttonPosition.width / 2),
+          pageY: (buttonPosition.top - bodyRect.top) - 12
+        };
 
-    if (opts.append && !$('.disabled.append', $sortableFields).length) {
-      let appendedField = utils.markup('li', opts.append, {className: 'disabled append'});
-      cancelArray.push(true);
-      $sortableFields.append(appendedField);
-    }
+      if (fields.length) {
+        _helpers.confirm(opts.messages.clearAllMessage, function() {
+          _helpers.removeAllfields();
+          opts.notify.success(opts.messages.allFieldsRemoved);
+          _helpers.save();
+        }, coords);
+      } else {
+        _helpers.dialog('There are no fields to clear', {pageX: coords.pageX, pageY: coords.pageY});
+      }
+    });
 
-    if (cancelArray.some(elem => elem === true)) {
-      this.$stageWrap.removeClass('empty');
-    }
+    // Save Idea Template
+    $(document.getElementById(frmbID + '-save')).click(function(e) {
+      e.preventDefault();
+      _helpers.save();
+    });
   };
  
   return Builder;
