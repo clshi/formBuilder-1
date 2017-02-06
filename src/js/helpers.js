@@ -169,6 +169,32 @@ function formBuilderHelpersFn(opts, formBuilder) {
       options.push(attrs);
     });
 
+    $('.input-wrap select > option:selected', field).each(function() {
+      let $option = $(this),
+        attrs = {
+          label: $.trim($option.text()),
+          value: $option.val(),
+          selected: true
+        };
+
+      options.push(attrs);
+    });
+
+    $('.input-wrap input.js_cb_option:checked', field).each(function() {
+      let $option = $(this),
+        selected = $(this).is(':checked'),
+        attrs = {
+          label: $(this).attr('data-label'),
+          value: $(this).val()
+        }
+
+      if(selected) {
+        attrs.selected = selected;
+      }
+
+      options.push(attrs);
+    });
+
     return options;
   };
 
@@ -348,6 +374,22 @@ function formBuilderHelpersFn(opts, formBuilder) {
         option.selected = $('.option-selected', this).is(':checked');
         option.value = $('.option-value', this).val();
         option.label = $('.option-label', this).val();
+        previewData.values.push(option);
+      });
+
+      $('.input-wrap select > option', field).each(function() {
+        let option = {};
+        option.selected = $(this).is(':selected');
+        option.value = $(this).val();
+        option.label = $.trim($(this).text());
+        previewData.values.push(option);
+      });
+
+      $('.input-wrap input.js_cb_option', field).each(function() {
+        let option = {};
+        option.selected = $(this).is(':checked');
+        option.value = $(this).val();
+        option.label = $.trim($(this).attr('data-label'));
         previewData.values.push(option);
       });
     }
@@ -664,7 +706,6 @@ function formBuilderHelpersFn(opts, formBuilder) {
     if (window.sessionStorage) {
       if (opts.sortableControls) {
         fieldOrder = window.sessionStorage.getItem('fieldOrder');
-        console.log(fieldOrder);
       } else {
         window.sessionStorage.removeItem('fieldOrder');
       }

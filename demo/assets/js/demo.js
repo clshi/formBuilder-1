@@ -1,9 +1,6 @@
 jQuery(document).ready(function($) {
   var buildWrap = document.querySelector('.build-wrap'),
     renderWrap = document.querySelector('.render-wrap'),
-    editBtn = document.getElementById('edit-form'),
-    formData = window.sessionStorage.getItem('formData'),
-    editing = true,
     fbOptions = {
       dataType: 'json',
       type: 'vertical',
@@ -60,7 +57,17 @@ jQuery(document).ready(function($) {
         label: 'Favourite',
         attrs: {
           type: 'checkbox-group',
-          name: 'favourite'
+          name: 'favourite',
+          values: [
+            {
+              "label": "Apple",
+              "value": "1"
+            },
+            {
+              "label": "Grape",
+              "value": "2"
+            }
+          ]
         }
       }, {
         label: 'Gender',
@@ -91,14 +98,8 @@ jQuery(document).ready(function($) {
       stickyControls: true
     };
 
-  if (formData) {
-    fbOptions.formData = JSON.parse(formData);
-  }
 
-  var toggleEdit = function() {
-    document.body.classList.toggle('form-rendered', editing);
-    editing = !editing;
-  };
+
 
   var formBuilder = $(buildWrap).neonFormBuilder(fbOptions).data('formBuilder');
 
@@ -106,13 +107,12 @@ jQuery(document).ready(function($) {
     window.sessionStorage.setItem('formData', JSON.stringify(formBuilder.getData()));
   });
 
-  editBtn.onclick = function() {
-    toggleEdit();
-  };
 
   if(window.sessionStorage.getItem('formData')) {
     formBuilder.setData(JSON.parse(window.sessionStorage.getItem('formData')));  
   }
+
+  // load data 
 /*  var data = [{
     "type": "radio-group",
     "name": "gender",

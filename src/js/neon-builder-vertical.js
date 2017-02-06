@@ -221,7 +221,11 @@ window.neon.VerticalFormBuilder = (function($) {
     advFields.push(this.textAttribute('name', values));
 
     if (valueField) {
-      advFields.push(this.textAttribute('value', values));
+    	if(values.type === 'checkbox') {
+    		advFields.push(this.boolAttribute('checked', values, {first: opts.messages.checked}));
+    	} else {
+    		advFields.push(this.textAttribute('value', values));	
+    	}
     }
 
     if (values.type === 'file') {
@@ -259,7 +263,8 @@ window.neon.VerticalFormBuilder = (function($) {
     }*/
 
     if (isOptionField) {
-      advFields.push(this.fieldOptions(values));
+      // advFields.push(this.fieldOptions(values));
+      advFields.push(this.fieldDefaultOptions(values));
     }
 
     /*if (utils.inArray(values.type, ['text', 'textarea'])) {
@@ -472,6 +477,45 @@ window.neon.VerticalFormBuilder = (function($) {
     }
 
     return requireField;
+  };
+
+  VerticalFormBuilder.prototype.fieldDefaultOptions = function(values) {
+  	var opts = this.opts;
+
+  	if(!values.values || !values.values.length) {
+  		return '';
+  	}
+
+  	let fieldOptions = [`<label class="false-label">${opts.messages.selectOptions}</label>`],
+  		isMultiple = values.multiple || (values.type === 'checkbox-group');
+
+  	values.values.forEach(option => Object.assign({}, {selected: false}, option));
+
+  	fieldOptions.push(`<div class="input-wrap">`);
+  	
+  	if(!isMultiple) {
+  		fieldOptions.push(`<select class="form-control">`);
+  		values.values.forEach(option => {
+	  		if(option.selected) {
+	  			fieldOptions.push(`<option value="${option.value}">${option.label}</option>`);	
+	  		} else {
+	  			fieldOptions.push(`<option value="${option.value}" selected="true">${option.label}</option>`);
+	  		}
+	  	});	
+	  	fieldOptions.push(`</select>`);
+  	} else {
+  		values.values.forEach(option => {
+  			if(option.selected) {
+  				fieldOptions.push(`<input class="js_cb_option" type="checkbox" value="${option.value}" data-label="${option.label}" checked="true"></input>  ${option.label}  `);
+  			} else {
+  				fieldOptions.push(`<input class="js_cb_option" type="checkbox" value="${option.value}" data-label="${option.label}"></input>  ${option.label}  `);	
+  			}
+	  	});
+  	}
+  	
+  	fieldOptions.push(`</div>`);
+
+  	return utils.markup('div', fieldOptions.join(''), {className: 'form-group field-options'}).outerHTML;
   };
 
   /**

@@ -28,6 +28,7 @@ window.neon.Builder = (function($) {
         checkboxGroup: 'Checkbox Group',
         checkbox: 'Checkbox',
         checkboxes: 'Checkboxes',
+        checked: 'Checked',
         className: 'Class',
         clearAllMessage: 'Are you sure you want to clear all fields?',
         clearAll: 'Clear',

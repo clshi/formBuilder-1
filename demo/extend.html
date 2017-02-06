@@ -1,0 +1,82 @@
+<html>
+<head></head>
+<body>
+	<script type="text/javascript">
+		// Object.create polyfill 兼容ie8等不支持Object.create方法的老浏览器
+		if (typeof Object.create != 'function') {
+		  Object.create = (function(undefined) {
+		    var Temp = function() {};
+		    return function (prototype, propertiesObject) {
+		      if(prototype !== Object(prototype) || prototype !== null) {
+		        throw TypeError('Argument must be an object, or null');
+		      }
+		      Temp.prototype = prototype || {};
+		      var result = new Temp();
+		      Temp.prototype = null;
+		      if (propertiesObject !== undefined) {
+		        Object.defineProperties(result, propertiesObject); 
+		      } 
+		      
+		      // to imitate the case of Object.create(null)
+		      if(prototype === null) {
+		         result.__proto__ = null;
+		      } 
+		      return result;
+		    };
+		  })();
+		}
+
+		/** 
+		 * Extends a super class
+		 * @param {Object} superclass The class to extend 
+		 * @param {Object} overrides The list of functions belong to subclass.  This should be specified as an object literal 
+		 * containing one or more methods. 
+		 * @return super class 
+		 */  
+		function extend(superclass, overrides) {
+		  var subclass = function() {
+		    superclass.apply(this, arguments);
+		  };
+		  subclass.prototype = Object.create(superclass.prototype);
+		  subclass.prototype.constructor = subclass;
+		  for(var o in overrides) {
+		    subclass.prototype[o] = overrides[o];
+		  }
+		  subclass.superclass = superclass.prototype;
+		  return subclass;
+		}
+
+		// usage demo
+		function Shape(name) {
+			this.name = name;
+		}
+
+		Shape.prototype.showName = function() {
+			console.log('show name: ' + this.name);
+		};
+
+		// override this
+		Shape.prototype.drawMe = function() {
+			console.log('draw a ' + this.name);
+		};
+
+		var Square = extend(Shape, {
+			// override drawMe() in parent object
+			drawMe: function() {
+				// call parent method
+				Square.superclass.drawMe.call(this);
+				// do our own logic
+				console.log('drawing ' + this.name + ' complete');
+			}
+		});
+
+		var s = new Shape('shape');
+		s.showName();
+		s.drawMe();
+
+		var square = new Square('square');
+		square.showName();
+		square.drawMe();
+	</script>
+</body>
+</html>
