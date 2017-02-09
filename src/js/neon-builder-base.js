@@ -11,7 +11,7 @@ window.neon.Builder = (function($) {
     var defaults = {
       controlPosition: 'left',
       controlOrder: [],
-      dataType: 'xml',
+      dataType: 'json',
       // Array of fields to disable
       disableFields: [],
       editOnAdd: false,
@@ -140,7 +140,6 @@ window.neon.Builder = (function($) {
           return console.warn(message);
         }
       },
-      sortableControls: false,
       stickyControls: false,
       showActionButtons: true,
       prefix: 'neon-form-builder-'
@@ -180,27 +179,34 @@ window.neon.Builder = (function($) {
   Builder.prototype.buildControlBox = function() {
     var opts = this.opts;
 
-    var frmbFields = this._helpers.orderFieldsByName(opts.frmbFields);
+    /*var frmbFields = this._helpers.orderFieldsByName(opts.frmbFields);
     if (opts.disableFields) {
       // remove disabledFields
       frmbFields = frmbFields.filter(function(field) {
         return !utils.inArray(field.attrs.type, opts.disableFields);
       });
-    }
+    }*/
+    var frmbFields = opts.frmbFields;
 
     var $cbUL = this.createControlBoxDom(frmbFields);
+    this.$cbUL = $cbUL;
 
-    var cbList = $cbUL.children();
+    var cbList = this.controlItemDomList();
+    var cbDataList = this.controlItemDataList(frmbFields);
+
     utils.forEach(cbList, (i) => {
-      $(cbList[i]).data('newFieldData', frmbFields[i]);
-      $(cbList[i]).data('attrs', frmbFields[i].attrs);
+      var $item = $(cbList[i]);
+      $item.data('newFieldData', cbDataList[i]);
+      $item.data('attrs', cbDataList[i].attrs);
+      $item.attr('type', cbDataList[i].attrs.type);
+      $item.attr('name', cbDataList[i].attrs.name);
+      $item.attr('label', cbDataList[i].label);
     });
 
     if (opts.sortableControls) {
       $cbUL.addClass('sort-enabled');
     }
 
-    this.$cbUL = $cbUL;
   };
 
   Builder.prototype.buildFieldBox = function() {
@@ -216,12 +222,13 @@ window.neon.Builder = (function($) {
     var $cbUL = this.$cbUL;
     var opts = this.opts;
 
-    // ControlBox with different fields
+    // ControlBox with different fields 
     $cbUL.sortable({
       helper: 'clone',
+      items: self.controlItemSelector(), 
       opacity: 0.9,
       connectWith: $sortableFields,
-      cancel: '.fb-separator',
+      cancel: '.control-disabled,.fb-separator',
       cursor: 'move',
       scroll: false,
       placeholder: 'ui-state-highlight',
@@ -244,7 +251,9 @@ window.neon.Builder = (function($) {
       }
     });
 
-    $($cbUL).children().click(function() {
+  
+    $(document).on('click', self.controlItemSelector(), function(event) {
+      if($(this).hasClass('control-disabled')) { return; }
       _helpers.stopIndex = undefined;
       self.processControl($(this));
       _helpers.save();
@@ -393,9 +402,16 @@ window.neon.Builder = (function($) {
   // override
   Builder.prototype.genFrmbID = function() {};
   Builder.prototype.createControlBoxDom = function(frmbFields) {};
+  Builder.prototype.controlItemSelector = function() {};
+  Builder.prototype.controlItemDataList = function(frmbFields) {};
   Builder.prototype.createFieldBoxDom = function() {};
   Builder.prototype.prepFieldVars = function($field, isNew = false) {};
   Builder.prototype.bindEvents = function() {};
+
+  // common
+  Builder.prototype.controlItemDomList = function() {
+    return $(this.controlItemSelector(), this.$cbUL);
+  };
 
   // private 
   Builder.prototype.bindActionButtonEvents = function() {

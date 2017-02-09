@@ -41,7 +41,11 @@ function formBuilderHelpersFn(opts, formBuilder) {
    */
   _helpers.startMoving = function(event, ui) {
     ui.item.show().addClass('moving');
-    _helpers.startIndex = $(this).children().index(ui.item);
+    if(formBuilder.controlItemDomList) {
+      _helpers.startIndex = formBuilder.controlItemDomList().index(ui.item);
+    } else {
+      _helpers.startIndex = $(this).children().index(ui.item);
+    }
   };
 
   /**
@@ -344,9 +348,9 @@ function formBuilderHelpersFn(opts, formBuilder) {
    */
   _helpers.updatePreview = function(field) {
     var fieldClass = field.attr('class');
-    if (fieldClass.indexOf('ui-sortable-handle') !== -1) {
+    /*if (fieldClass.indexOf('ui-sortable-handle') !== -1) {
       return;
-    }
+    }*/
 
     var fieldType = $(field).attr('type'),
       $prevHolder = $('.prev-holder', field),
@@ -678,7 +682,8 @@ function formBuilderHelpersFn(opts, formBuilder) {
       return false;
     }
     var fieldOrder = {};
-    $cbUL.children().each(function(index, element) {
+    var $cbList = formBuilder.controlItemDomList ? formBuilder.controlItemDomList() : $cbUL.children();
+    $cbList.each(function(index, element) {
       fieldOrder[index] = $(element).data('attrs')[key];
     });
     if (window.sessionStorage) {
