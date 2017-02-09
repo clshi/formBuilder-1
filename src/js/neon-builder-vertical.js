@@ -12,7 +12,8 @@ window.neon.VerticalFormBuilder = (function($) {
   		// Create draggable fields for formBuilder
     	var cbUL = utils.markup('ul', null, {id: boxID, className: 'frmb-control'});
     	var $cbUL = $(cbUL);
-	    // Loop through
+
+	    /*// Loop through
 	    utils.forEach(frmbFields, (i) => {
 	      let $field = $('<li/>', {
 	        'class': 'icon-' + frmbFields[i].attrs.className,
@@ -23,10 +24,51 @@ window.neon.VerticalFormBuilder = (function($) {
 
 	      let typeLabel = utils.markup('span', frmbFields[i].label);
 	      $field.html(typeLabel).appendTo($cbUL);
-	    });
+	    });*/
+
+	    //filter box
+	    var $filterbox = $('<input/>', { 'class': 'form-control', 'id':'nfb-filter-box', 'type':'input', 'placeholder':'Type to search...'});   
+
+	    var $fieldtree = $('<div/>', { 'class': 'objectTree', 'id':'nfb-field-tree'});
+      // $('<li/>', { 'class': 'fb-separator' }).html('<hr>').appendTo($cbUL);
+      $filterbox.appendTo($cbUL);
+      $fieldtree.treeview({
+          levels: 1,
+          showBorder: false,
+          highlightSelected: false,
+          data: frmbFields
+      }).appendTo($cbUL);
+
+      $filterbox.on('keyup', function(e) {
+        if($('#nfb-filter-box').val()!=''){
+          var pattern = $('#nfb-filter-box').val();
+          var options = {
+            ignoreCase: true,
+            exactMatch: false,
+            filterResults: true,
+          };
+          var results = $('#nfb-field-tree').treeview('search', [ pattern, options ]);
+        }else{
+          $('#nfb-field-tree').treeview('clearSearch');
+        }
+      });
 
 	    return $cbUL;
   	},
+    controlItemSelector: function() {
+      return 'li.list-group-item:not(.node-parent)';
+    },
+    controlItemDataList: function(frmbFields) {
+      var ret = [];
+      frmbFields.forEach(f => {
+        if(f.nodes && f.nodes.length) {
+          f.nodes.forEach(n => {
+            ret.push(n);
+          });
+        }
+      });
+      return ret;
+    },
   	createFieldBoxDom: function() {
   		return $('<ul/>').attr('id', this.frmbID).addClass('frmb');
   	},
@@ -74,6 +116,8 @@ window.neon.VerticalFormBuilder = (function($) {
 
       this.appendNewField(field);
       if (isNew) {
+      	// disable control after add
+      	this.toggleControlDisabled($field);
         document.dispatchEvent(this.events.fieldAdded);
       }
       this.$stageWrap.removeClass('empty');
@@ -104,7 +148,7 @@ window.neon.VerticalFormBuilder = (function($) {
       });
 
     var liContents = utils.markup(
-      'div', [toggleBtn, copyBtn, delBtn], {className: 'field-actions'}
+      'div', [toggleBtn, delBtn], {className: 'field-actions'}
     ).outerHTML;
 
     // Field preview Label
@@ -130,6 +174,7 @@ window.neon.VerticalFormBuilder = (function($) {
     let field = utils.markup('li', liContents, {
 	      'class': type + '-field form-field',
 	      'type': type,
+	      'name': values.name,
 	      id: lastID
 	    }),
 	    $li = $(field);
@@ -800,6 +845,7 @@ window.neon.VerticalFormBuilder = (function($) {
         };
 
       var deleteID = $(this).parents('.form-field:eq(0)').attr('id'),
+      	deleteName = $(this).parents('.form-field:eq(0)').attr('name'),
         $field = $(document.getElementById(deleteID));
 
       document.addEventListener('modalClosed', function() {
@@ -810,10 +856,16 @@ window.neon.VerticalFormBuilder = (function($) {
       if (opts.fieldRemoveWarn) {
         let warnH3 = utils.markup('h3', opts.messages.warning),
           warnMessage = utils.markup('p', opts.messages.fieldRemoveWarning);
-        _helpers.confirm([warnH3, warnMessage], () => _helpers.removeField(deleteID), coords);
+        _helpers.confirm([warnH3, warnMessage], () => {
+        	_helpers.removeField(deleteID);
+        	let control = formBuilder.conrolItemDomList().filter('[name="' + deleteName + '"]');
+        	formBuilder.toggleControlDisabled(control);
+        }, coords);
         $field.addClass('deleting');
       } else {
         _helpers.removeField(deleteID);
+        let control = formBuilder.controlItemDomList().filter('[name="' + deleteName + '"]');
+        formBuilder.toggleControlDisabled(control);
       }
     });
 
@@ -885,9 +937,33 @@ window.neon.VerticalFormBuilder = (function($) {
   		'file': 'file-input',
   		'button': 'button-input'
   	};
-  	utils.forEach(opts.frmbFields, (i) => {
-  		opts.frmbFields[i].attrs.className = typeClassMapping[opts.frmbFields[i].attrs.type];
-  	});
+    this.controlItemDataList(opts.frmbFields).forEach(f => {
+      f.attrs.className = typeClassMapping[f.attrs.type];
+    });
+
+    // add text from label
+    opts.frmbFields.forEach(f => {
+      if(f.label && !f.text) {
+        f.text = f.label;
+      }
+      if(f.nodes && f.nodes.length) {
+        f.nodes.forEach(n => {
+          if(n.label && !n.text) {
+            n.text = n.label;
+          }
+        });
+      }
+    });
+  };
+
+  // private:
+
+  VerticalFormBuilder.prototype.toggleControlDisabled = function($field) {
+  	if(!$field instanceof jQuery) {
+  		$field = $($field);
+  	}
+  	$field.toggleClass('control-disabled');
+    $(this.$cbUL).sortable("refresh");
   };
 
   return VerticalFormBuilder;	

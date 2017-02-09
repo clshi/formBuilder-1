@@ -1279,3 +1279,6 @@ a.btn.toggle-form {
     clear: both; }
     .form-builder-dialog .button-wrap .btn {
       margin-left: 10px; }
+
+.control-disabled {
+  color: grey; }
