@@ -102,6 +102,7 @@
 
 			// Get methods
 			getNode: $.proxy(this.getNode, this),
+			getNodeByName: $.proxy(this.getNodeByName, this),
 			getParent: $.proxy(this.getParent, this),
 			getSiblings: $.proxy(this.getSiblings, this),
 			getSelected: $.proxy(this.getSelected, this),
@@ -531,6 +532,12 @@
       	treeItem.attr('label', node.label);
 			}
 
+			if(node.controlDisabled) {
+				treeItem.addClass('control-disabled');
+			} else {
+				treeItem.removeClass('control-disabled');
+			}
+
 			// Add indent/spacer to mimic tree structure
 			for (var i = 0; i < (level - 1); i++) {
 				treeItem.append(_this.template.indent);
@@ -721,6 +728,21 @@
 	*/
 	Tree.prototype.getNode = function (nodeId) {
 		return this.nodes[nodeId];
+	};
+
+	/**
+		Returns a single node object that matches the given node name.
+		@param {String} name - A node's name
+		@return {Object} node - Matching node
+	*/
+	Tree.prototype.getNodeByName = function (name) {
+		var nodes = this.nodes;
+		for(var i = 0; i < nodes.length; i++) {
+			var node = nodes[i];
+			if(node.attrs && node.attrs.name && node.attrs.name == name) {
+				return node;
+			}
+		}
 	};
 
 	/**

@@ -585,6 +585,9 @@ Author: Kevin Chappell <kevin.b.chappell@gmail.com>
         float: left; }
         [id^='frmb-'][id$='-form-wrap'] .frmb .form-elements .input-wrap > input[type=checkbox] {
           margin-top: 8px; }
+        [id^='frmb-'][id$='-form-wrap'] .frmb .form-elements .input-wrap > span {
+          display: inline-block;
+          margin-top: 6px; }
       [id^='frmb-'][id$='-form-wrap'] .frmb .form-elements .btn-group {
         margin-left: 2%; }
       [id^='frmb-'][id$='-form-wrap'] .frmb .form-elements input[type='text'],

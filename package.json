@@ -68,7 +68,7 @@
         "js": [
           "src/js/polyfills.js",
           "src/js/utils.js",
-          "src/js/helpers.js",
+          "src/js/neon-helpers.js",
           "src/js/events.js",
           "src/js/kc-toggle.js",
           "src/js/neon-builder-base.js",

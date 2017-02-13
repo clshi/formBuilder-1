@@ -326,6 +326,12 @@ fbUtils.fieldRender = function(fieldData, opts, preview = false) {
 
     fieldData.type = fieldData.subtype || fieldData.type;
 
+    if(fieldLabelText === '') {
+      if(fieldData.enableCustomizedLabel) {
+        fieldLabelText = fieldData.customizedLabel || '';
+      }
+    }
+
     if (fieldData.required) {
       fieldData.required = null;
       fieldData['aria-required'] = 'true';

@@ -26,7 +26,8 @@ window.neon.VerticalFormBuilder = (function($) {
 	      $field.html(typeLabel).appendTo($cbUL);
 	    });*/
 
-	    //filter box
+	    //filter box 
+      // TODO: treebox id should add this.frmbID
 	    var $filterbox = $('<input/>', { 'class': 'form-control', 'id':'nfb-filter-box', 'type':'input', 'placeholder':'Type to search...'});   
 
 	    var $fieldtree = $('<div/>', { 'class': 'objectTree', 'id':'nfb-field-tree'});
@@ -115,13 +116,42 @@ window.neon.VerticalFormBuilder = (function($) {
       utils.escapeAttrs(field);
 
       this.appendNewField(field);
+
       if (isNew) {
-      	// disable control after add
-      	this.toggleControlDisabled($field);
+        // disable control after add
+        this.toggleControlDisabled($field);
         document.dispatchEvent(this.events.fieldAdded);
+      } else {
+        var node = $('#nfb-field-tree').treeview('getNodeByName', field.name);
+        node.controlDisabled = true;
       }
       this.$stageWrap.removeClass('empty');
-  	}
+  	},
+    loadFields: function() {
+      var opts = this.opts;
+      var $stageWrap = this.$stageWrap;
+      var $sortableFields = this.$sortableFields;
+      var _helpers = this._helpers;
+
+      let formData = this.formData;
+      if (formData && formData.length) {
+        for (let i = 0; i < formData.length; i++) {
+          this.prepFieldVars(formData[i]);
+        }
+        $stageWrap.removeClass('empty');
+      } else if (opts.defaultFields && opts.defaultFields.length) {
+        // Load default fields if none are set
+        opts.defaultFields.forEach(field => this.prepFieldVars(field));
+        $stageWrap.removeClass('empty');
+      } else if (!opts.prepend && !opts.append) {
+        $stageWrap.addClass('empty').attr('data-content', opts.messages.getStarted);
+      }
+      _helpers.save();
+
+      $('li.form-field:not(.disabled)', $sortableFields).each(function() {
+        _helpers.updatePreview($(this));
+      });
+    }
   });
 
   VerticalFormBuilder.prototype.appendNewField = function(values) {
@@ -188,6 +218,9 @@ window.neon.VerticalFormBuilder = (function($) {
 
     $('.sortable-options', $li).sortable({update: () => {_helpers.updatePreview($li);}}); // make dynamically added option fields sortable if they exist.
 
+    // trigger customized label keyup event in purpose of updating label preview
+    $('[name="customizedLabel"]', $li).trigger('keyup');
+
     _helpers.updatePreview($li);
 
     if (opts.editOnAdd) {
@@ -220,14 +253,16 @@ window.neon.VerticalFormBuilder = (function($) {
       valueField = !utils.inArray(values.type, ['header', 'paragraph', 'file'].concat(optionFields)),
       roles = values.role !== undefined ? values.role.split(',') : [];
 
+    advFields.push(this.staticAttribute('label', values, {first: opts.messages.defaultLabel}));
     advFields.push(this.requiredField(values));
-    advFields.push(this.boolAttribute('hidden', values, {first: opts.messages.hidden}));
+    advFields.push(this.boolAttribute('hidden', values, {first: opts.messages.hiddenField}));
+    advFields.push(this.boolAttribute('enableCustomizedLabel', values, {first: opts.messages.enableCustomizedLabel}));
 
     /*if (values.type === 'checkbox') {
       advFields.push(this.boolAttribute('toggle', values, {first: opts.messages.toggle}));
     }*/
 
-    advFields.push(this.textAttribute('label', values));
+    advFields.push(this.textAttribute('customizedLabel', values, {first: opts.messages.customizedLabel}));
 
     values.size = values.size || 'm';
     values.style = values.style || 'default';
@@ -317,6 +352,27 @@ window.neon.VerticalFormBuilder = (function($) {
     }*/
 
     return advFields.join('');
+  };
+
+  VerticalFormBuilder.prototype.staticAttribute = function(name, values, labels) {
+    let label = (txt) => {
+      return `<label>${txt}</label>`;
+    },
+    value = values[name],
+    text = `<span static-attribute-key="${name}">${value}</span>`,
+    left = [],
+    right = [
+      text
+    ];
+
+    if(labels.first) {
+      left.unshift(label(labels.first));
+    }
+
+    right.unshift('<div class="input-wrap">');
+    right.push('</div>');
+
+    return `<div class="form-group ${name}-wrap">${left.concat(right).join('')}</div>`;
   };
 
   VerticalFormBuilder.prototype.boolAttribute = function(name, values, labels) {
@@ -769,8 +825,21 @@ window.neon.VerticalFormBuilder = (function($) {
     });
 
     // update preview to label
-    $sortableFields.on('keyup change', '[name="label"]', function() {
-      $('.field-label', $(this).closest('li')).text($(this).val());
+    $sortableFields.on('keyup change', '[name="customizedLabel"]', function() {
+      var enableCustomizedLabel = $('[name="enableCustomizedLabel"]', $sortableFields).is(':checked');
+      if(enableCustomizedLabel) {
+        $('.field-label', $(this).closest('li')).text($(this).val());  
+      }
+    });
+    $sortableFields.on('change', '[name="enableCustomizedLabel"]', function() {
+      var enableCustomizedLabel = $(this).is(':checked');
+      var customizedLabel = $('[name="customizedLabel"]', $sortableFields).val() || '';
+      if(enableCustomizedLabel) {
+        $('.field-label', $(this).closest('li')).text(customizedLabel);   
+      } else {
+        var defaultLabel = $.trim($('[static-attribute-key="label"]', $(this).closest('li')).text());
+        $('.field-label', $(this).closest('li')).text(defaultLabel);   
+      }
     });
 
     // remove error styling when users tries to correct mistake
@@ -962,6 +1031,15 @@ window.neon.VerticalFormBuilder = (function($) {
   	if(!$field instanceof jQuery) {
   		$field = $($field);
   	}
+    
+    var nodeId = $field.data('nodeid');
+    var node = $('#nfb-field-tree').treeview('getNode', nodeId);
+    if(node.controlDisabled) {
+      node.controlDisabled = false;
+    } else {
+      node.controlDisabled = true;
+    }
+
   	$field.toggleClass('control-disabled');
     $(this.$cbUL).sortable("refresh");
   };

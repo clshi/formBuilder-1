@@ -37,13 +37,16 @@ window.neon.Builder = (function($) {
         copy: 'Copy To Clipboard',
         copyButton: '&#43;',
         copyButtonTooltip: 'Copy',
+        customizedLabel: 'Label',
         dateField: 'Date Field',
         description: 'Help Text',
         descriptionField: 'Description',
         devMode: 'Developer Mode',
+        defaultLabel: 'Default Label',
         editNames: 'Edit Names',
         editorTitle: 'Form Elements',
         editXML: 'Edit XML',
+        enableCustomizedLabel: 'Customized Label',
         enableOther: 'Enable &quot;Other&quot;',
         enableOtherMsg: 'Let users to enter an unlisted option',
         fieldDeleteWarning: false,
@@ -56,6 +59,7 @@ window.neon.Builder = (function($) {
         header: 'Header',
         hide: 'Edit',
         hidden: 'Hidden Input',
+        hiddenField: 'Hidden',
         label: 'Label',
         labelEmpty: 'Field Label cannot be empty',
         limitRole: 'Limit access to one or more of the following roles:',
@@ -93,7 +97,6 @@ window.neon.Builder = (function($) {
         removeOption: 'Remove Option',
         remove: '&#215;',
         required: 'Required',
-        hidden: 'Hidden',
         richText: 'Rich Text Editor',
         roles: 'Access',
         save: 'Save',
@@ -252,7 +255,7 @@ window.neon.Builder = (function($) {
     });
 
   
-    $(document).on('click', self.controlItemSelector(), function(event) {
+    $(self.$cbUL).on('click', self.controlItemSelector(), function(event) {
       if($(this).hasClass('control-disabled')) { return; }
       _helpers.stopIndex = undefined;
       self.processControl($(this));
@@ -346,32 +349,6 @@ window.neon.Builder = (function($) {
     this.$stageWrap = $stageWrap;
   };
 
-  Builder.prototype.loadFields = function() {
-    var opts = this.opts;
-    var $stageWrap = this.$stageWrap;
-    var $sortableFields = this.$sortableFields;
-    var _helpers = this._helpers;
-
-    let formData = this.formData;
-    if (formData && formData.length) {
-      for (let i = 0; i < formData.length; i++) {
-        this.prepFieldVars(formData[i]);
-      }
-      $stageWrap.removeClass('empty');
-    } else if (opts.defaultFields && opts.defaultFields.length) {
-      // Load default fields if none are set
-      opts.defaultFields.forEach(field => this.prepFieldVars(field));
-      $stageWrap.removeClass('empty');
-    } else if (!opts.prepend && !opts.append) {
-      $stageWrap.addClass('empty').attr('data-content', opts.messages.getStarted);
-    }
-    _helpers.save();
-
-    $('li.form-field:not(.disabled)', $sortableFields).each(function() {
-      _helpers.updatePreview($(this));
-    });
-  };
-
   Builder.prototype.create = function() {
 
     this.init();
@@ -407,6 +384,7 @@ window.neon.Builder = (function($) {
   Builder.prototype.createFieldBoxDom = function() {};
   Builder.prototype.prepFieldVars = function($field, isNew = false) {};
   Builder.prototype.bindEvents = function() {};
+  Builder.prototype.loadFields = function() {};
 
   // common
   Builder.prototype.controlItemDomList = function() {
