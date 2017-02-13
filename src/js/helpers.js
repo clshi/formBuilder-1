@@ -41,11 +41,7 @@ function formBuilderHelpersFn(opts, formBuilder) {
    */
   _helpers.startMoving = function(event, ui) {
     ui.item.show().addClass('moving');
-    if(formBuilder.controlItemDomList) {
-      _helpers.startIndex = formBuilder.controlItemDomList().index(ui.item);
-    } else {
-      _helpers.startIndex = $(this).children().index(ui.item);
-    }
+    _helpers.startIndex = $('li', this).index(ui.item);
   };
 
   /**
@@ -72,7 +68,6 @@ function formBuilderHelpersFn(opts, formBuilder) {
     var form = document.getElementById(opts.formID),
       lastIndex = form.children.length - 1,
       cancelArray = [];
-
     _helpers.stopIndex = ui.placeholder.index() - 1;
 
     if (!opts.sortableControls && ui.item.parent().hasClass('frmb-control')) {
@@ -86,6 +81,7 @@ function formBuilderHelpersFn(opts, formBuilder) {
     if (opts.append) {
       cancelArray.push((_helpers.stopIndex + 1) === lastIndex);
     }
+
     _helpers.doCancel = cancelArray.some(elem => elem === true);
   };
 
@@ -173,32 +169,6 @@ function formBuilderHelpersFn(opts, formBuilder) {
       options.push(attrs);
     });
 
-    $('.input-wrap select > option:selected', field).each(function() {
-      let $option = $(this),
-        attrs = {
-          label: $.trim($option.text()),
-          value: $option.val(),
-          selected: true
-        };
-
-      options.push(attrs);
-    });
-
-    $('.input-wrap input.js_cb_option:checked', field).each(function() {
-      let $option = $(this),
-        selected = $(this).is(':checked'),
-        attrs = {
-          label: $(this).attr('data-label'),
-          value: $(this).val()
-        }
-
-      if(selected) {
-        attrs.selected = selected;
-      }
-
-      options.push(attrs);
-    });
-
     return options;
   };
 
@@ -278,13 +248,6 @@ function formBuilderHelpersFn(opts, formBuilder) {
             fieldData.values = _helpers.fieldOptionData($field);
           }
 
-          if(!fieldData.label) {
-            let label = $.trim($('[static-attribute-key="label"]', $field).text());
-            if(label) {
-              fieldData.label = label;
-            }
-          }
-
           formData.push(fieldData);
         }
 
@@ -355,9 +318,9 @@ function formBuilderHelpersFn(opts, formBuilder) {
    */
   _helpers.updatePreview = function(field) {
     var fieldClass = field.attr('class');
-    /*if (fieldClass.indexOf('ui-sortable-handle') !== -1) {
+    if (fieldClass.indexOf('ui-sortable-handle') !== -1) {
       return;
-    }*/
+    }
 
     var fieldType = $(field).attr('type'),
       $prevHolder = $('.prev-holder', field),
@@ -387,22 +350,6 @@ function formBuilderHelpersFn(opts, formBuilder) {
         option.label = $('.option-label', this).val();
         previewData.values.push(option);
       });
-
-      $('.input-wrap select > option', field).each(function() {
-        let option = {};
-        option.selected = $(this).is(':selected');
-        option.value = $(this).val();
-        option.label = $.trim($(this).text());
-        previewData.values.push(option);
-      });
-
-      $('.input-wrap input.js_cb_option', field).each(function() {
-        let option = {};
-        option.selected = $(this).is(':checked');
-        option.value = $(this).val();
-        option.label = $.trim($(this).attr('data-label'));
-        previewData.values.push(option);
-      });
     }
 
     previewData = utils.trimObj(previewData);
@@ -412,6 +359,7 @@ function formBuilderHelpersFn(opts, formBuilder) {
 
     field.data('fieldData', previewData);
     preview = utils.fieldRender(previewData, opts, true);
+
     $prevHolder.html(preview);
 
     $('input[toggle]', $prevHolder).kcToggle();
@@ -676,26 +624,17 @@ function formBuilderHelpersFn(opts, formBuilder) {
    * @param {Object} $cbUL our list of elements
    */
   _helpers.setFieldOrder = function($cbUL) {
-    _helpers.setFieldOrderByKey($cbUL, 'type');
-  };
-
-  _helpers.setFieldOrderByName = function($cbUL) {
-    _helpers.setFieldOrderByKey($cbUL, 'name');
-  };
-
-  _helpers.setFieldOrderByKey = function($cbUL, key) {
     if (!opts.sortableControls) {
       return false;
     }
     var fieldOrder = {};
-    var $cbList = formBuilder.controlItemDomList ? formBuilder.controlItemDomList() : $cbUL.children();
-    $cbList.each(function(index, element) {
-      fieldOrder[index] = $(element).data('attrs')[key];
+    $cbUL.children().each(function(index, element) {
+      fieldOrder[index] = $(element).data('attrs').type;
     });
     if (window.sessionStorage) {
       window.sessionStorage.setItem('fieldOrder', window.JSON.stringify(fieldOrder));
     }
-  }
+  };
 
   /**
    * Reorder the controls if the user has previously ordered them.
@@ -704,14 +643,6 @@ function formBuilderHelpersFn(opts, formBuilder) {
    * @return {Array}
    */
   _helpers.orderFields = function(frmbFields) {
-    return _helpers.orderFieldsByKey(frmbFields, 'type');
-  };
-
-  _helpers.orderFieldsByName = function(frmbFields) {
-    return _helpers.orderFieldsByKey(frmbFields, 'name');
-  }
-
-  _helpers.orderFieldsByKey = function(frmbFields, key) {
     var fieldOrder = false;
 
     if (window.sessionStorage) {
@@ -723,7 +654,7 @@ function formBuilderHelpersFn(opts, formBuilder) {
     }
 
     if (!fieldOrder) {
-      let controlOrder = opts.controlOrder.concat(frmbFields.map(field => field.attrs[key]));
+      let controlOrder = opts.controlOrder.concat(frmbFields.map(field => field.attrs.type));
       fieldOrder = utils.unique(controlOrder);
     } else {
       fieldOrder = window.JSON.parse(fieldOrder);
@@ -734,15 +665,15 @@ function formBuilderHelpersFn(opts, formBuilder) {
 
     var newOrderFields = [];
 
-    fieldOrder.forEach((fieldKey) => {
+    fieldOrder.forEach((fieldType) => {
       var field = frmbFields.filter(function(field) {
-        return field.attrs[key] === fieldKey;
+        return field.attrs.type === fieldType;
       })[0];
       newOrderFields.push(field);
     });
 
     return newOrderFields.filter(Boolean);
-  }
+  };
 
   /**
    * Close fields being editing
@@ -797,7 +728,7 @@ function formBuilderHelpersFn(opts, formBuilder) {
           top: 0,
           bottom: 'auto',
           right: 'auto',
-          left: cbPosition.left - 9
+          left: cbPosition.left
         };
 
         var cbOffset = $cbWrap.offset(),
